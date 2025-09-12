@@ -20,12 +20,12 @@ The application architecture supports **serverless event-driven operations** thr
 ## 🔧 Tools & Technologies Used
 
 - **AWS DynamoDB** → Stores user credentials, music metadata, and subscriptions.
-- **AWS S3** → Optional storage for artist images.
+- **AWS S3** → storage for artist images.
 - **AWS Lambda** → Serverless functions for CRUD operations.
 - **AWS API Gateway** → Handles requests from frontend to Lambda functions.
 - **Flask (Python)** → Backend web framework.
 - **HTML, CSS, JavaScript** → Frontend UI.
-- **Other Tools** → JSON dataset for music (`music_data.json`), session management, and environment variable configuration.
+- **Other Tools** → JSON dataset for music, session management, and environment variable configuration.
 
 ---
 
