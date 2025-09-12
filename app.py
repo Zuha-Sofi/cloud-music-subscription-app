@@ -1,18 +1,20 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 import boto3
+import os
 
 app = Flask(__name__)
-app.secret_key = '0wk7kSUe2RiXwC3XWM+oDmC7dS9GbgbvsXAkgfKp'  # Change this to a strong secret key
+# Use environment variable for secret key
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'replace-with-a-secure-key')
 
 # AWS DynamoDB
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
-login_table = dynamodb.Table('login')
-music_table = dynamodb.Table('music')
-subscription_table = dynamodb.Table('subscription')
+login_table = dynamodb.Table(os.getenv('LOGIN_TABLE', 'login'))
+music_table = dynamodb.Table(os.getenv('MUSIC_TABLE', 'music'))
+subscription_table = dynamodb.Table(os.getenv('SUBSCRIPTION_TABLE', 'subscription'))
 
-# AWS S3 Client (for future extension if needed)
+# AWS S3 Client (optional)
 s3 = boto3.client('s3', region_name='us-east-1')
-BUCKET_NAME = 'your-s3-bucket-name-here'  # Replace with your real S3 bucket name
+BUCKET_NAME = os.getenv('S3_BUCKET_NAME', 'your-s3-bucket-name-here')
 
 # Route for Login Page
 @app.route('/', methods=['GET', 'POST'])
@@ -65,7 +67,6 @@ def main_page():
     user_email = session['email']
     username = session['username']
 
-    # Fetch user's subscriptions
     response = subscription_table.scan(
         FilterExpression=boto3.dynamodb.conditions.Attr('email').eq(user_email)
     )
@@ -117,12 +118,11 @@ def query():
     if 'email' not in session:
         return redirect(url_for('login'))
 
-    title = request.form.get('title').strip()
-    artist = request.form.get('artist').strip()
-    year = request.form.get('year').strip()
-    album = request.form.get('album').strip()
+    title = request.form.get('title', '').strip()
+    artist = request.form.get('artist', '').strip()
+    year = request.form.get('year', '').strip()
+    album = request.form.get('album', '').strip()
 
-    # At least one field must be filled
     if not (title or artist or year or album):
         subscription_response = subscription_table.scan(
             FilterExpression=boto3.dynamodb.conditions.Attr('email').eq(session['email'])
@@ -148,24 +148,20 @@ def query():
     if album:
         filter_conditions.append(boto3.dynamodb.conditions.Attr('album').contains(album))
 
-    scan_kwargs = {
-        'FilterExpression': filter_conditions[0]
-    }
+    scan_kwargs = {'FilterExpression': filter_conditions[0]}
     for cond in filter_conditions[1:]:
-        scan_kwargs['FilterExpression'] = scan_kwargs['FilterExpression'] & cond
+        scan_kwargs['FilterExpression'] &= cond
 
-    # Scan music table
     response = music_table.scan(**scan_kwargs)
     results = response['Items']
 
-    # Fetch user's current subscriptions
     subscription_response = subscription_table.scan(
         FilterExpression=boto3.dynamodb.conditions.Attr('email').eq(session['email'])
     )
     subscriptions = subscription_response['Items']
 
     if not results:
-        return render_template('main.html', username=session['username'], subscriptions=[subscriptions], results=[], message="No result is retrieved. Please query again.")
+        return render_template('main.html', username=session['username'], subscriptions=subscriptions, results=[], message="No result is retrieved. Please query again.")
 
     return render_template('main.html', username=session['username'], subscriptions=subscriptions, results=results)
 
@@ -175,6 +171,5 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
-# Run the Flask app
 if __name__ == '__main__':
     app.run(debug=True)
