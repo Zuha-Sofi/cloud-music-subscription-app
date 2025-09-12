@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register Page</title>
+  <link rel="stylesheet" href="style2.css">
+</head>
+<body>
+  <div class="container">
+    <h2>Register</h2>
+ 
+    <form id="registerForm">
+      <label for="email">Email:</label>
+      <input type="text" id="email" name="email" required>
+ 
+      <label for="username">Username:</label>
+      <input type="text" id="username" name="username" required>
+ 
+      <label for="password">Password:</label>
+      <input type="password" id="password" name="password" required>
+ 
+      <button type="submit" class="submit">Register</button>
+      <button type="reset" class="reset">Reset</button>
+    </form>
+ 
+    <p class="error-message" id="errorMessage"></p>
+    <p class="success-message" id="successMessage"></p>
+ 
+    <p>Already have an account? <a href="login.html">Login here</a></p>
+  </div>
+ 
+  <script>
+    const apiUrl = "https://r7qlyb2zb5.execute-api.us-east-1.amazonaws.com/development/register_user";
+ 
+    document.getElementById("registerForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+ 
+      const email = this.email.value;
+      const username = this.username.value;
+      const password = this.password.value;
+ 
+      const payload = {
+        email: email,
+        user_name: username,
+        password: password
+      };
+ 
+      try {
+        const res = await fetch(apiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+ 
+        let result = await res.json();
+        try {
+          result = typeof result.body === "string" ? JSON.parse(result.body) : result;
+        } catch (err) {}
+ 
+        if (result.error === "Email already exists") {
+          document.getElementById("errorMessage").innerText = result.error;
+          document.getElementById("successMessage").innerText = "";
+        } else if (result.error === "Missing fields") {
+          document.getElementById("errorMessage").innerText = result.error;
+          document.getElementById("successMessage").innerText = "";
+        } else if (result.message === "Registered") {
+          document.getElementById("successMessage").innerText = "Registered successfully! Redirecting to login...";
+          document.getElementById("errorMessage").innerText = "";
+          setTimeout(() => {
+            window.location.href = "login.html";
+          }, 1500);
+        } else {
+          document.getElementById("errorMessage").innerText = result.error || "Registration failed.";
+          document.getElementById("successMessage").innerText = "";
+        }
+      } catch (error) {
+        document.getElementById("errorMessage").innerText = "Request failed. Please try again.";
+        document.getElementById("successMessage").innerText = "";
+        console.error("Registration error:", error);
+      }
+    });
+  </script>
+</body>
+</html>

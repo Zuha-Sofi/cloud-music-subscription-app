@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Main Page</title>
+  <link rel="stylesheet" href="style.css"> 
+  <style>
+    /* Inline CSS to support external CSS */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f9;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+ 
+    .container {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      grid-template-columns: 1fr 2fr;
+      gap: 20px;
+      width: 80%;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+ 
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+      grid-column: span 2;
+    }
+ 
+    .logout-button {
+      color: red;
+      text-decoration: none;
+      font-weight: bold;
+      float: right;
+    }
+ 
+    h1 {
+      font-size: 28px;
+      color: #007bff;
+    }
+ 
+    .left-column, .right-column {
+      grid-column: span 1;
+    }
+ 
+    .query-results-footer {
+      grid-column: span 2;
+    }
+ 
+    .query-results-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr); /* 4 columns */
+      gap: 20px;
+    }
+ 
+    @media (max-width: 1024px) {
+      .query-results-grid {
+        grid-template-columns: repeat(3, 1fr); /* 3 columns for medium screens */
+      }
+    }
+ 
+    @media (max-width: 768px) {
+      .query-results-grid {
+        grid-template-columns: repeat(2, 1fr); /* 2 columns for small screens */
+      }
+    }
+ 
+    @media (max-width: 480px) {
+      .query-results-grid {
+        grid-template-columns: 1fr; /* Single column for very small screens */
+      }
+    }
+ 
+    .query-card, .subscription-card {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 10px;
+      background-color: #fff;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s ease;
+    }
+ 
+    .query-card:hover, .subscription-card:hover {
+      transform: scale(1.02);
+    }
+ 
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      margin-top: 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+ 
+    button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1 id="welcome"></h1>
+      <a href="#" onclick="logout()" class="logout-button">Logout</a>
+    </header>
+ 
+    <div class="left-column">
+      <section class="box">
+        <h2>User</h2>
+        <p>Logged in as: <strong id="usernameDisplay"></strong></p>
+      </section>
+ 
+      <section class="box">
+        <h2>Query</h2>
+        <form id="queryForm">
+          <label for="title">Title:</label>
+          <input type="text" id="title" name="title">
+ 
+          <label for="artist">Artist:</label>
+          <input type="text" id="artist" name="artist">
+ 
+          <label for="year">Year:</label>
+          <input type="text" id="year" name="year">
+ 
+          <label for="album">Album:</label>
+          <input type="text" id="album" name="album">
+ 
+          <button type="submit" class="submit">Query</button>
+        </form>
+        <p id="message" class="error-message"></p>
+      </section>
+    </div>
+ 
+    <div class="right-column">
+      <section class="subscription-box">
+        <h2>Subscription</h2>
+        <div id="subscriptionsContainer">
+          <p>Loading subscriptions...</p>
+        </div>
+      </section>
+    </div>
+ 
+    <footer class="query-results-footer">
+      <h2>Query Results</h2>
+      <div id="queryResults" class="query-results-grid">
+        <p>Query results will appear here.</p>
+      </div>
+      <button id="loadMoreButton" style="display: none;" onclick="loadMoreResults()">Load More</button>
+    </footer>
+  </div>
+
+  <script>
+    const apiBase = "https://r7qlyb2zb5.execute-api.us-east-1.amazonaws.com/development";
+    const userEmail = localStorage.getItem("email");
+    const username = localStorage.getItem("username");
+
+    if (!userEmail || !username) {
+      alert("Please log in first.");
+      window.location.href = "login.html";
+    }
+
+    document.getElementById("welcome").innerText = `Welcome, ${username}!`;
+    document.getElementById("usernameDisplay").innerText = username;
+
+    async function fetchSubscriptions() {
+      try {
+        const res = await fetch(`${apiBase}/get_subscriptions?email=${userEmail}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" }
+        });
+
+        let data = await res.json();
+        if (typeof data.body === "string") {
+          data = JSON.parse(data.body);
+        }
+
+        const container = document.getElementById("subscriptionsContainer");
+        container.innerHTML = "";
+        document.getElementById("message").innerText = "";
+
+        if (!data.subscriptions || data.subscriptions.length === 0) {
+          container.innerHTML = "<p>No subscribed songs yet.</p>";
+          return;
+        }
+
+        data.subscriptions.forEach(song => {
+          const div = document.createElement("div");
+          div.style.border = "1px solid black";
+          div.style.margin = "10px";
+          div.style.padding = "10px";
+
+          div.innerHTML = `
+            <p><strong>Title:</strong> ${song.title}</p>
+            <p><strong>Artist:</strong> ${song.artist}</p>
+            <p><strong>Year:</strong> ${song.year}</p>
+            <p><strong>Album:</strong> ${song.album}</p>
+            <img src="${song.image_url}" alt="Artist Image" width="200"><br><br>
+            <button onclick="removeSong('${song.title}')">Remove</button>
+          `;
+          container.appendChild(div);
+        });
+      } catch (err) {
+        console.error("Error fetching subscriptions:", err);
+        document.getElementById("subscriptionsContainer").innerHTML = "<p style='color:red;'>Error loading subscriptions.</p>";
+      }
+    }
+
+    async function removeSong(title) {
+      await fetch(`${apiBase}/remove`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: userEmail, title })
+      });
+      fetchSubscriptions();
+    }
+
+    document.getElementById("queryForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const form = new FormData(this);
+      const payload = {
+        title: form.get("title"),
+        artist: form.get("artist"),
+        year: form.get("year"),
+        album: form.get("album")
+      };
+
+      try {
+        const res = await fetch(`${apiBase}/query`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        let result = await res.json();
+        if (typeof result.body === "string") {
+          result = JSON.parse(result.body);
+        }
+
+        const resultContainer = document.getElementById("queryResults");
+        resultContainer.innerHTML = "";
+        document.getElementById("message").innerText = "";
+
+        if (!result.results || result.results.length === 0) {
+          document.getElementById("message").innerText = "No result found.";
+          return;
+        }
+
+        result.results.forEach(song => {
+          const div = document.createElement("div");
+          div.style.border = "1px solid green";
+          div.style.margin = "10px";
+          div.style.padding = "10px";
+
+          div.innerHTML = `
+            <p><strong>Title:</strong> ${song.title}</p>
+            <p><strong>Artist:</strong> ${song.artist}</p>
+            <p><strong>Year:</strong> ${song.year}</p>
+            <p><strong>Album:</strong> ${song.album}</p>
+            <img src="${song.image_url}" alt="Artist Image" width="200"><br><br>
+            <button onclick='subscribe(${JSON.stringify(song)})'>Subscribe</button>
+          `;
+
+          resultContainer.appendChild(div);
+        });
+      } catch (err) {
+        console.error("Query error:", err);
+        document.getElementById("message").innerText = "Error fetching results.";
+      }
+    });
+
+    async function subscribe(song) {
+      try {
+        const response = await fetch(`${apiBase}/subscribe`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...song, email: userEmail })
+        });
+
+        if (response.ok) {
+          fetchSubscriptions(); // Refresh list
+        } else {
+          const errMsg = await response.text();
+          console.error("Subscribe failed:", errMsg);
+          alert("Failed to subscribe.");
+        }
+      } catch (err) {
+        console.error("Subscribe error:", err);
+        alert("Failed to subscribe.");
+      }
+    }
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = "login.html";
+    }
+
+    fetchSubscriptions(); // On page load
+  </script>
+</body>
+</html>

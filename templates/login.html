@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login Page</title>
+  <link rel="stylesheet" href="style2.css">
+</head>
+<body>
+  <div class="container">
+    <h1>MUSIC SUBSCRIPTION APP</h1>
+    <h2>Login</h2>
+    <form id="loginForm">
+      <label for="email">Email:</label>
+      <input type="text" id="email" name="email" required>
+
+      <label for="password">Password:</label>
+      <input type="password" id="password" name="password" required>
+
+      <button type="submit" class="submit">Login</button>
+      <button type="reset" class="reset">Reset</button>
+    </form>
+
+    <p class="error-message" id="errorMessage"></p>
+
+    <p>Don't have an account? <a href="register.html">Register here</a></p>
+  </div>
+
+  <script>
+    const apiBase = "https://r7qlyb2zb5.execute-api.us-east-1.amazonaws.com/development";
+
+    document.getElementById("loginForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const formData = new FormData(this);
+      const payload = {
+        email: formData.get("email"),
+        password: formData.get("password")
+      };
+
+      try {
+        const response = await fetch(`${apiBase}/login_user`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const raw = await response.json();
+        const result = typeof raw.body === "string" ? JSON.parse(raw.body) : raw;
+
+        if (result.message === "Login successful") {
+          localStorage.setItem("email", payload.email);
+          localStorage.setItem("username", result.username);
+          window.location.href = "main.html";
+        } else {
+          document.getElementById("errorMessage").innerText = result.error || "Email or password is invalid.";
+        }
+
+      } catch (error) {
+        document.getElementById("errorMessage").innerText = "Server error or network issue.";
+        console.error("Login error:", error);
+      }
+    });
+  </script>
+</body>
+</html>
